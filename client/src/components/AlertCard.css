@@ -1,0 +1,56 @@
+.alert-card {
+  background: linear-gradient(135deg, #fff8f0 0%, #fff 100%);
+  border: 1px solid #fed7aa;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.alert-time {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.alert-message {
+  font-size: 0.9375rem;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+}
+
+.alert-incident {
+  display: block;
+  padding: 0.75rem;
+  background: var(--surface);
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.alert-incident strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.alert-location {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.alert-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.alert-user {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}

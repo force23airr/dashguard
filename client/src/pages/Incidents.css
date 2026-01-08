@@ -1,0 +1,63 @@
+.incidents-page {
+  padding: 2rem 0;
+}
+
+.incidents-page h1 {
+  font-size: 1.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.incidents-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filter-group label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-light);
+}
+
+.filter-group select {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  background: var(--surface);
+  min-width: 150px;
+}
+
+.incidents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.empty-state {
+  background: var(--surface);
+  border-radius: 0.75rem;
+  padding: 3rem;
+  text-align: center;
+  color: var(--text-light);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.pagination span {
+  color: var(--text-light);
+  font-size: 0.875rem;
+}

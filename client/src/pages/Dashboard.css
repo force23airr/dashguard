@@ -1,0 +1,61 @@
+.dashboard {
+  padding: 2rem 0;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  font-size: 1.75rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 2rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.section-header h2 {
+  font-size: 1.25rem;
+}
+
+.view-all {
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.empty-state {
+  background: var(--surface);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-light);
+}
+
+.incidents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-alerts {
+    order: -1;
+  }
+}

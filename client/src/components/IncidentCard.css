@@ -1,0 +1,74 @@
+.incident-card {
+  display: block;
+  background: var(--surface);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.incident-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.incident-media {
+  height: 160px;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.incident-media img,
+.incident-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.incident-content {
+  padding: 1rem;
+}
+
+.incident-badges {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.incident-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.incident-description {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.incident-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-bottom: 0.5rem;
+}
+
+.incident-location {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.incident-user {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.incident-user strong {
+  color: var(--primary);
+}
