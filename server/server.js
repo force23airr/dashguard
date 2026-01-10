@@ -12,6 +12,10 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import incidentRoutes from './routes/incidents.js';
 import alertRoutes from './routes/alerts.js';
+import policeRoutes from './routes/police.js';
+import insuranceRoutes, { insuranceApiRouter } from './routes/insurance.js';
+import analyticsRoutes from './routes/analytics.js';
+import marketplaceRoutes, { marketplaceApiRouter } from './routes/marketplace.js';
 
 dotenv.config();
 
@@ -38,11 +42,23 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Make io accessible to routes
 app.set('io', io);
 
+// Serve reports and exports directories
+app.use('/reports', express.static(path.join(__dirname, 'reports')));
+app.use('/exports', express.static(path.join(__dirname, 'exports')));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/police', policeRoutes);
+app.use('/api/insurance', insuranceRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+
+// External API routes (v1)
+app.use('/api/v1/insurance', insuranceApiRouter);
+app.use('/api/v1/marketplace', marketplaceApiRouter);
 
 // Socket.io connection
 io.on('connection', (socket) => {

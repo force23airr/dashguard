@@ -145,29 +145,51 @@ const IncidentDetail = () => {
 
           <div className="incident-sidebar">
             {isAuthenticated && (
-              <div className="card create-alert-card">
-                <h3>Create Alert</h3>
-                <p>Warn the community about this incident</p>
-                <form onSubmit={handleCreateAlert}>
-                  <div className="form-group">
-                    <textarea
-                      placeholder="Enter alert message..."
-                      value={alertMessage}
-                      onChange={(e) => setAlertMessage(e.target.value)}
-                      rows={3}
-                      required
-                    />
+              <>
+                <div className="card create-alert-card">
+                  <h3>Create Alert</h3>
+                  <p>Warn the community about this incident</p>
+                  <form onSubmit={handleCreateAlert}>
+                    <div className="form-group">
+                      <textarea
+                        placeholder="Enter alert message..."
+                        value={alertMessage}
+                        onChange={(e) => setAlertMessage(e.target.value)}
+                        rows={3}
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="btn btn-warning"
+                      disabled={creating}
+                      style={{ width: '100%' }}
+                    >
+                      {creating ? 'Creating...' : 'Broadcast Alert'}
+                    </button>
+                  </form>
+                </div>
+
+                {isOwner && (
+                  <div className="card actions-card">
+                    <h3>Actions</h3>
+                    <div className="action-buttons">
+                      <Link
+                        to={`/incidents/${id}/police-report`}
+                        className="btn btn-action"
+                      >
+                        Generate Police Report
+                      </Link>
+                      <Link
+                        to={`/insurance/claims?incidentId=${id}`}
+                        className="btn btn-action"
+                      >
+                        Create Insurance Claim
+                      </Link>
+                    </div>
                   </div>
-                  <button
-                    type="submit"
-                    className="btn btn-warning"
-                    disabled={creating}
-                    style={{ width: '100%' }}
-                  >
-                    {creating ? 'Creating...' : 'Broadcast Alert'}
-                  </button>
-                </form>
-              </div>
+                )}
+              </>
             )}
           </div>
         </div>

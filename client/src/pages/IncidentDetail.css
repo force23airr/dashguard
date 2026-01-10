@@ -100,6 +100,40 @@
   color: white;
 }
 
+.actions-card {
+  margin-top: 1rem;
+}
+
+.actions-card h3 {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-action {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #1a365d;
+  color: white;
+  text-align: center;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.btn-action:hover {
+  background: #2c5282;
+  color: white;
+}
+
 @media (max-width: 768px) {
   .incident-detail-grid {
     grid-template-columns: 1fr;

@@ -9,6 +9,10 @@ import Incidents from './pages/Incidents';
 import IncidentDetail from './pages/IncidentDetail';
 import ReportIncident from './pages/ReportIncident';
 import Profile from './pages/Profile';
+import PoliceReport from './pages/PoliceReport';
+import InsuranceClaim from './pages/InsuranceClaim';
+import Analytics from './pages/Analytics';
+import Marketplace from './pages/Marketplace';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -78,6 +82,46 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/incidents/:incidentId/police-report"
+            element={
+              <ProtectedRoute>
+                <PoliceReport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/insurance/claims"
+            element={
+              <ProtectedRoute>
+                <InsuranceClaim />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/insurance/claims/:claimId"
+            element={
+              <ProtectedRoute>
+                <InsuranceClaim />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/marketplace"
+            element={
+              <ProtectedRoute>
+                <Marketplace />
               </ProtectedRoute>
             }
           />
