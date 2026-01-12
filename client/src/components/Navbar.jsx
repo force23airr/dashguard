@@ -26,6 +26,7 @@ const Navbar = () => {
             <>
               <Link to="/dashboard">Dashboard</Link>
               <Link to="/analytics">Analytics</Link>
+              <Link to="/plates">Plate Search</Link>
               <Link to="/insurance/claims">Insurance</Link>
               <Link to="/marketplace">Marketplace</Link>
               <Link to="/report" className="btn btn-primary">

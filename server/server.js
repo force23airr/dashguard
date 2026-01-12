@@ -16,6 +16,7 @@ import policeRoutes from './routes/police.js';
 import insuranceRoutes, { insuranceApiRouter } from './routes/insurance.js';
 import analyticsRoutes from './routes/analytics.js';
 import marketplaceRoutes, { marketplaceApiRouter } from './routes/marketplace.js';
+import plateRoutes from './routes/plates.js';
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ app.use('/api/police', policeRoutes);
 app.use('/api/insurance', insuranceRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/plates', plateRoutes);
 
 // External API routes (v1)
 app.use('/api/v1/insurance', insuranceApiRouter);

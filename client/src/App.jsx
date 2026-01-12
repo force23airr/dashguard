@@ -13,6 +13,7 @@ import PoliceReport from './pages/PoliceReport';
 import InsuranceClaim from './pages/InsuranceClaim';
 import Analytics from './pages/Analytics';
 import Marketplace from './pages/Marketplace';
+import PlateSearch from './pages/PlateSearch';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -122,6 +123,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Marketplace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/plates"
+            element={
+              <ProtectedRoute>
+                <PlateSearch />
               </ProtectedRoute>
             }
           />

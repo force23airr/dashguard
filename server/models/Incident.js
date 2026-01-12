@@ -59,6 +59,39 @@ const incidentSchema = new mongoose.Schema({
     path: String,
     mimetype: String
   }],
+  detectedPlates: [{
+    plate: {
+      type: String,
+      uppercase: true,
+      trim: true
+    },
+    confidence: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    region: String,
+    vehicleType: String,
+    detectedAt: {
+      type: Date,
+      default: Date.now
+    },
+    sourceFile: String,
+    boundingBox: {
+      x: Number,
+      y: Number,
+      width: Number,
+      height: Number
+    },
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    reportedToAuthorities: {
+      type: Boolean,
+      default: false
+    }
+  }],
   severity: {
     type: String,
     enum: ['low', 'medium', 'high', 'critical'],

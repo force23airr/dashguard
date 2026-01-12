@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import PlateDetection from '../components/PlateDetection';
 import './IncidentDetail.css';
 
 const IncidentDetail = () => {
@@ -133,6 +134,12 @@ const IncidentDetail = () => {
               <h3>Description</h3>
               <p>{incident.description}</p>
             </div>
+
+            <PlateDetection
+              incident={incident}
+              isOwner={isOwner}
+              onUpdate={fetchIncident}
+            />
 
             {isOwner && (
               <div className="incident-actions">

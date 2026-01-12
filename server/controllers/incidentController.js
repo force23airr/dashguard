@@ -2,9 +2,61 @@ import Incident from '../models/Incident.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import {
+  detectPlatesFromImage,
+  detectPlatesFromVideo
+} from '../services/plateRecognition/plateDetector.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Async plate detection helper (runs in background)
+const processPlateDetection = async (incident) => {
+  try {
+    if (!incident.mediaFiles || incident.mediaFiles.length === 0) return;
+
+    const allDetections = [];
+
+    for (const file of incident.mediaFiles) {
+      const filePath = path.join(__dirname, '..', file.path.replace(/^\//, ''));
+
+      if (!fs.existsSync(filePath)) {
+        console.warn(`[PlateDetection] File not found: ${filePath}`);
+        continue;
+      }
+
+      let detections = [];
+
+      if (file.mimetype.startsWith('video')) {
+        const result = await detectPlatesFromVideo(filePath);
+        detections = result.detections;
+      } else if (file.mimetype.startsWith('image')) {
+        detections = await detectPlatesFromImage(filePath);
+      }
+
+      detections.forEach(detection => {
+        allDetections.push({
+          plate: detection.plate,
+          confidence: detection.confidence,
+          region: detection.region,
+          vehicleType: detection.vehicleType,
+          boundingBox: detection.boundingBox,
+          sourceFile: file.filename,
+          detectedAt: new Date()
+        });
+      });
+    }
+
+    if (allDetections.length > 0) {
+      await Incident.findByIdAndUpdate(incident._id, {
+        $push: { detectedPlates: { $each: allDetections } }
+      });
+      console.log(`[PlateDetection] Found ${allDetections.length} plates for incident ${incident._id}`);
+    }
+  } catch (error) {
+    console.error(`[PlateDetection] Error processing incident ${incident._id}:`, error);
+  }
+};
 
 // @desc    Get all incidents
 // @route   GET /api/incidents
@@ -79,6 +131,13 @@ export const createIncident = async (req, res) => {
     });
 
     await incident.populate('user', 'username avatar');
+
+    // Trigger plate detection asynchronously (don't await - runs in background)
+    if (mediaFiles.length > 0) {
+      processPlateDetection(incident).catch(err =>
+        console.error('[PlateDetection] Background processing error:', err)
+      );
+    }
 
     res.status(201).json(incident);
   } catch (error) {
