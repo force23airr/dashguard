@@ -62,6 +62,15 @@
   color: #38a169 !important;
 }
 
+.flagged-link {
+  color: #e53e3e !important;
+  font-weight: 600 !important;
+}
+
+.flagged-link:hover {
+  color: #c53030 !important;
+}
+
 @media (max-width: 768px) {
   .navbar-links {
     gap: 1rem;

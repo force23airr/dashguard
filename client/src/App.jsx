@@ -17,6 +17,7 @@ import PlateSearch from './pages/PlateSearch';
 import GetRewarded from './pages/GetRewarded';
 import RewardsDashboard from './pages/RewardsDashboard';
 import LeaderboardPage from './pages/LeaderboardPage';
+import FlaggedPlates from './pages/FlaggedPlates';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -147,6 +148,7 @@ function App() {
             }
           />
           <Route path="/rewards/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/flagged-drivers" element={<FlaggedPlates />} />
         </Routes>
       </main>
     </div>

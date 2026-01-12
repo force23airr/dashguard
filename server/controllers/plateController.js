@@ -322,6 +322,188 @@ export const searchByPlate = async (req, res) => {
   }
 };
 
+/**
+ * Get most flagged plates leaderboard
+ * GET /api/plates/flagged?limit=20&type=dangerous_driving
+ */
+export const getFlaggedPlates = async (req, res) => {
+  try {
+    const { limit = 20, type } = req.query;
+
+    // Build match criteria
+    const matchCriteria = {
+      'detectedPlates.0': { $exists: true } // Has at least one plate
+    };
+
+    // Filter by incident type if specified
+    if (type) {
+      matchCriteria.type = type;
+    } else {
+      // Default to dangerous driving related types
+      matchCriteria.type = {
+        $in: ['dangerous_driving', 'crime', 'traffic_accident', 'security']
+      };
+    }
+
+    const flaggedPlates = await Incident.aggregate([
+      { $match: matchCriteria },
+      { $unwind: '$detectedPlates' },
+      {
+        $group: {
+          _id: { $toUpper: '$detectedPlates.plate' },
+          reportCount: { $sum: 1 },
+          incidents: {
+            $push: {
+              incidentId: '$_id',
+              type: '$type',
+              severity: '$severity',
+              date: '$createdAt',
+              location: '$location.address'
+            }
+          },
+          severityCounts: {
+            $push: '$severity'
+          },
+          types: { $addToSet: '$type' },
+          firstSeen: { $min: '$createdAt' },
+          lastSeen: { $max: '$createdAt' },
+          regions: { $addToSet: '$detectedPlates.region' }
+        }
+      },
+      {
+        $match: {
+          reportCount: { $gte: 1 } // At least 1 report (change to 2+ for production)
+        }
+      },
+      {
+        $addFields: {
+          // Calculate danger score based on severity and frequency
+          dangerScore: {
+            $add: [
+              { $multiply: ['$reportCount', 10] },
+              {
+                $multiply: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$severityCounts',
+                        cond: { $eq: ['$$this', 'critical'] }
+                      }
+                    }
+                  },
+                  25
+                ]
+              },
+              {
+                $multiply: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$severityCounts',
+                        cond: { $eq: ['$$this', 'high'] }
+                      }
+                    }
+                  },
+                  15
+                ]
+              },
+              {
+                $multiply: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: '$severityCounts',
+                        cond: { $eq: ['$$this', 'medium'] }
+                      }
+                    }
+                  },
+                  5
+                ]
+              }
+            ]
+          }
+        }
+      },
+      { $sort: { dangerScore: -1, reportCount: -1 } },
+      { $limit: parseInt(limit) },
+      {
+        $project: {
+          plate: '$_id',
+          reportCount: 1,
+          dangerScore: 1,
+          types: 1,
+          firstSeen: 1,
+          lastSeen: 1,
+          regions: 1,
+          recentIncidents: { $slice: ['$incidents', 5] } // Last 5 incidents
+        }
+      }
+    ]);
+
+    // Add rank
+    const ranked = flaggedPlates.map((plate, idx) => ({
+      rank: idx + 1,
+      ...plate
+    }));
+
+    res.json({
+      count: ranked.length,
+      plates: ranked
+    });
+  } catch (error) {
+    console.error('Error fetching flagged plates:', error);
+    res.status(500).json({ error: 'Failed to fetch flagged plates' });
+  }
+};
+
+/**
+ * Get stats for the flagged plates system
+ * GET /api/plates/stats
+ */
+export const getPlateStats = async (req, res) => {
+  try {
+    const stats = await Incident.aggregate([
+      { $match: { 'detectedPlates.0': { $exists: true } } },
+      { $unwind: '$detectedPlates' },
+      {
+        $group: {
+          _id: null,
+          totalPlatesDetected: { $sum: 1 },
+          uniquePlates: { $addToSet: { $toUpper: '$detectedPlates.plate' } },
+          totalIncidentsWithPlates: { $addToSet: '$_id' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          totalPlatesDetected: 1,
+          uniquePlatesCount: { $size: '$uniquePlates' },
+          incidentsWithPlates: { $size: '$totalIncidentsWithPlates' }
+        }
+      }
+    ]);
+
+    const typeBreakdown = await Incident.aggregate([
+      { $match: { 'detectedPlates.0': { $exists: true } } },
+      {
+        $group: {
+          _id: '$type',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    res.json({
+      stats: stats[0] || { totalPlatesDetected: 0, uniquePlatesCount: 0, incidentsWithPlates: 0 },
+      typeBreakdown
+    });
+  } catch (error) {
+    console.error('Error fetching plate stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+};
+
 export default {
   detectPlatesFromIncident,
   getIncidentPlates,
@@ -329,5 +511,7 @@ export default {
   addPlateManually,
   removePlate,
   verifyPlate,
-  searchByPlate
+  searchByPlate,
+  getFlaggedPlates,
+  getPlateStats
 };

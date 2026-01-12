@@ -7,12 +7,18 @@ import {
   addPlateManually,
   removePlate,
   verifyPlate,
-  searchByPlate
+  searchByPlate,
+  getFlaggedPlates,
+  getPlateStats
 } from '../controllers/plateController.js';
 
 const router = express.Router();
 
-// All routes require authentication
+// Public routes (no auth required)
+router.get('/flagged', getFlaggedPlates);
+router.get('/stats', getPlateStats);
+
+// Protected routes require authentication
 router.use(auth);
 
 // Detect plates from incident media files

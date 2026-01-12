@@ -30,9 +30,10 @@ const Navbar = () => {
               <Link to="/plates">Plate Search</Link>
               <Link to="/insurance/claims">Insurance</Link>
               <Link to="/marketplace">Marketplace</Link>
-              <Link to="/report" className="btn btn-primary">
+              <Link to="/report">
                 Report Incident
               </Link>
+              <Link to="/flagged-drivers" className="flagged-link">Flagged Drivers</Link>
               <div className="navbar-user">
                 <Link to="/profile" className="user-link">
                   {user?.username}
@@ -45,6 +46,7 @@ const Navbar = () => {
           ) : (
             <>
               <Link to="/get-rewarded" className="rewards-link">Earn Money</Link>
+              <Link to="/flagged-drivers" className="flagged-link">Flagged Drivers</Link>
               <Link to="/login">Login</Link>
               <Link to="/register" className="btn btn-primary">
                 Sign Up
