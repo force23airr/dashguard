@@ -1,0 +1,602 @@
+.rewards-dashboard {
+  padding: 2rem 0;
+  background: var(--background);
+  min-height: calc(100vh - 70px);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+/* Balance Cards */
+.balance-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.balance-card {
+  background: var(--surface);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  border-left: 4px solid var(--border);
+}
+
+.balance-card.available {
+  border-left-color: #48bb78;
+}
+
+.balance-card.pending {
+  border-left-color: #ecc94b;
+}
+
+.balance-card.lifetime {
+  border-left-color: #4299e1;
+}
+
+.balance-card.redeemed {
+  border-left-color: #9f7aea;
+}
+
+.balance-label {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin-bottom: 0.5rem;
+}
+
+.balance-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.balance-usd {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin-top: 0.25rem;
+}
+
+/* Quick Actions */
+.quick-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.quick-actions .btn {
+  flex: 1;
+  max-width: 200px;
+}
+
+/* Dashboard Tabs */
+.dashboard-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+.dashboard-tabs .tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--text-light);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.dashboard-tabs .tab:hover {
+  color: var(--text);
+}
+
+.dashboard-tabs .tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+/* Tab Content */
+.tab-content {
+  min-height: 400px;
+}
+
+/* Overview Tab */
+.overview-tab {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+}
+
+.card h3 {
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+/* Tier Card */
+.tier-card {
+  grid-column: 1 / -1;
+}
+
+.current-tier {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 2rem;
+  border: 3px solid;
+  border-radius: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.tier-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.tier-mult {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.tier-progress {
+  display: flex;
+  gap: 2rem;
+}
+
+.progress-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.progress-stat span:first-child {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.progress-stat span:last-child {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Streak Card */
+.streak-stats {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+
+.streak-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.streak-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.streak-label {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.streak-info {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin: 0;
+}
+
+/* Activity Card */
+.activity-card {
+  grid-column: 1 / -1;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--background);
+  border-radius: 0.5rem;
+}
+
+.activity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.activity-type {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  text-transform: uppercase;
+}
+
+.activity-desc {
+  font-size: 0.875rem;
+}
+
+.activity-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.activity-amount .positive {
+  color: #48bb78;
+  font-weight: 600;
+}
+
+.activity-amount .negative {
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+.activity-date {
+  font-size: 0.75rem;
+  color: var(--text-light);
+}
+
+.no-activity {
+  text-align: center;
+  color: var(--text-light);
+  padding: 2rem;
+}
+
+/* Referrals Tab */
+.referrals-tab {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.referral-code-card {
+  grid-column: 1 / -1;
+}
+
+.referral-code-display {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.referral-code-display code {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: var(--background);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-family: monospace;
+}
+
+.referral-code-card > p {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.referral-stats {
+  display: flex;
+  justify-content: space-around;
+}
+
+.ref-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ref-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.ref-label {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+.milestone-card p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.milestone-card strong {
+  color: var(--primary);
+}
+
+.referral-list-card {
+  grid-column: 1 / -1;
+}
+
+.referral-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.referral-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--background);
+  border-radius: 0.5rem;
+}
+
+.ref-username {
+  flex: 1;
+  font-weight: 500;
+}
+
+.ref-status {
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.ref-status.status-pending {
+  background: #fefcbf;
+  color: #744210;
+}
+
+.ref-status.status-qualified {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.ref-status.status-rewarded {
+  background: #e9d8fd;
+  color: #553c9a;
+}
+
+.ref-progress {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+/* Tiers Tab */
+.tiers-tab {
+  padding: 1rem 0;
+}
+
+.tiers-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+.tier-detail-card {
+  background: var(--surface);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  border: 2px solid transparent;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tier-detail-card.current {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tier-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.tier-header .tier-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.tier-header h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tier-desc {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.tier-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tier-benefits .benefit {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.tier-benefits .benefit span {
+  color: var(--text-light);
+}
+
+.tier-benefits .benefit strong {
+  color: var(--text);
+}
+
+.tier-requirements {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.tier-requirements small {
+  font-size: 0.7rem;
+  color: var(--text-light);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.modal h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.modal .form-group {
+  margin-bottom: 1rem;
+}
+
+.modal .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.modal .form-group input,
+.modal .form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background: var(--background);
+  color: var(--text);
+}
+
+.modal .form-group small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--text-light);
+  font-size: 0.75rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.modal-actions .btn {
+  flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .tiers-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .tier-detail-card.current {
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .balance-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .quick-actions {
+    flex-wrap: wrap;
+  }
+
+  .quick-actions .btn {
+    max-width: none;
+  }
+
+  .overview-tab {
+    grid-template-columns: 1fr;
+  }
+
+  .referrals-tab {
+    grid-template-columns: 1fr;
+  }
+
+  .tiers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tier-progress {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .balance-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .tiers-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .referral-code-display {
+    flex-direction: column;
+  }
+
+  .referral-stats {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}

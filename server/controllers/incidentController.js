@@ -6,6 +6,7 @@ import {
   detectPlatesFromImage,
   detectPlatesFromVideo
 } from '../services/plateRecognition/plateDetector.js';
+import { awardIncidentCredits } from '../services/rewards/rewardService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -138,6 +139,11 @@ export const createIncident = async (req, res) => {
         console.error('[PlateDetection] Background processing error:', err)
       );
     }
+
+    // Award credits for incident creation (runs in background)
+    awardIncidentCredits(incident, req.user._id).catch(err =>
+      console.error('[Rewards] Error awarding incident credits:', err)
+    );
 
     res.status(201).json(incident);
   } catch (error) {

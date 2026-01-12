@@ -31,6 +31,81 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'moderator', 'admin'],
     default: 'user'
+  },
+
+  // Rewards tracking
+  rewards: {
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true  // Allow null/missing values
+    },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    totalReferrals: {
+      type: Number,
+      default: 0
+    },
+    qualifiedReferrals: {
+      type: Number,
+      default: 0
+    },
+    // Quick access to key metrics
+    currentTier: {
+      type: String,
+      enum: ['bronze', 'silver', 'gold', 'platinum', 'diamond'],
+      default: 'bronze'
+    },
+    creditsBalance: {
+      type: Number,
+      default: 0
+    },
+    lifetimeCredits: {
+      type: Number,
+      default: 0
+    },
+    // Leaderboard
+    leaderboardRank: Number,
+    leaderboardScore: {
+      type: Number,
+      default: 0
+    },
+    lastRankUpdate: Date,
+    // Profile display settings
+    showOnLeaderboard: {
+      type: Boolean,
+      default: true
+    },
+    publicStats: {
+      type: Boolean,
+      default: true
+    }
+  },
+
+  // Profile for gig drivers
+  profile: {
+    isGigDriver: {
+      type: Boolean,
+      default: false
+    },
+    gigPlatforms: [{
+      type: String,
+      enum: ['uber', 'lyft', 'doordash', 'grubhub', 'instacart', 'amazon_flex', 'shipt', 'spark', 'other']
+    }],
+    averageHoursPerWeek: {
+      type: Number,
+      min: 0,
+      max: 168
+    },
+    primaryCity: String,
+    primaryState: String,
+    dashCamModel: String,
+    vehicleType: {
+      type: String,
+      enum: ['car', 'suv', 'truck', 'van', 'motorcycle', 'bicycle', 'other']
+    }
   }
 }, {
   timestamps: true

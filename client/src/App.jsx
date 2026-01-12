@@ -14,6 +14,9 @@ import InsuranceClaim from './pages/InsuranceClaim';
 import Analytics from './pages/Analytics';
 import Marketplace from './pages/Marketplace';
 import PlateSearch from './pages/PlateSearch';
+import GetRewarded from './pages/GetRewarded';
+import RewardsDashboard from './pages/RewardsDashboard';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -134,6 +137,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/get-rewarded" element={<GetRewarded />} />
+          <Route
+            path="/rewards"
+            element={
+              <ProtectedRoute>
+                <RewardsDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/rewards/leaderboard" element={<LeaderboardPage />} />
         </Routes>
       </main>
     </div>

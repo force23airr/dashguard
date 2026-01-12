@@ -53,6 +53,15 @@
   color: var(--primary) !important;
 }
 
+.rewards-link {
+  color: #48bb78 !important;
+  font-weight: 600 !important;
+}
+
+.rewards-link:hover {
+  color: #38a169 !important;
+}
+
 @media (max-width: 768px) {
   .navbar-links {
     gap: 1rem;

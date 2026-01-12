@@ -19,7 +19,31 @@ const incidentSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['dangerous_driving', 'crime', 'security', 'other'],
+    enum: [
+      // Original types
+      'dangerous_driving',
+      'crime',
+      'security',
+      'other',
+      // Infrastructure types
+      'infrastructure_pothole',
+      'infrastructure_road_damage',
+      'infrastructure_construction',
+      'infrastructure_signage',
+      'infrastructure_lighting',
+      // Weather event types
+      'weather_flooding',
+      'weather_ice',
+      'weather_debris',
+      'weather_visibility',
+      'weather_obstruction',
+      // Traffic pattern types
+      'traffic_congestion',
+      'traffic_accident',
+      'traffic_closure',
+      'traffic_signal_issue',
+      'traffic_unusual_pattern'
+    ],
     required: [true, 'Incident type is required']
   },
   location: {
@@ -121,7 +145,42 @@ const incidentSchema = new mongoose.Schema({
     pdfPath: String,
     acknowledgedAt: Date,
     caseNumber: String
-  }]
+  }],
+  // Data quality metrics for rewards
+  dataQuality: {
+    score: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 50
+    },
+    factors: {
+      hasVideo: { type: Boolean, default: false },
+      hasGPS: { type: Boolean, default: false },
+      hasTimestamp: { type: Boolean, default: true },
+      isClearFootage: { type: Boolean, default: false },
+      isVerified: { type: Boolean, default: false },
+      communityScore: { type: Number, default: 0 }
+    }
+  },
+  // Rewards tracking
+  rewards: {
+    baseCredits: { type: Number, default: 0 },
+    bonusCredits: { type: Number, default: 0 },
+    totalCredits: { type: Number, default: 0 },
+    rewardId: mongoose.Schema.Types.ObjectId,
+    awardedAt: Date
+  },
+  // Data marketplace value
+  dataValue: {
+    estimatedValue: { type: Number, default: 0 },
+    category: {
+      type: String,
+      enum: ['common', 'uncommon', 'rare', 'high_value'],
+      default: 'common'
+    },
+    usageCount: { type: Number, default: 0 }
+  }
 }, {
   timestamps: true
 });

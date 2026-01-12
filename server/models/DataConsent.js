@@ -66,7 +66,13 @@ const dataConsentSchema = new mongoose.Schema({
   incidentFilters: {
     includedTypes: [{
       type: String,
-      enum: ['dangerous_driving', 'crime', 'security', 'other']
+      enum: [
+        'dangerous_driving', 'crime', 'security', 'other',
+        'infrastructure_pothole', 'infrastructure_road_damage', 'infrastructure_construction',
+        'infrastructure_signage', 'infrastructure_lighting',
+        'weather_flooding', 'weather_ice', 'weather_debris', 'weather_visibility', 'weather_obstruction',
+        'traffic_congestion', 'traffic_accident', 'traffic_closure', 'traffic_signal_issue', 'traffic_unusual_pattern'
+      ]
     }],
     excludedIncidents: [{
       type: mongoose.Schema.Types.ObjectId,
@@ -83,9 +89,10 @@ const dataConsentSchema = new mongoose.Schema({
   compensation: {
     type: {
       type: String,
-      enum: ['credits', 'revenue_share', 'donation', 'none'],
+      enum: ['credits', 'revenue_share', 'hybrid', 'donation', 'none'],
       default: 'credits'
     },
+    // Credit balances
     creditsEarned: {
       type: Number,
       default: 0
@@ -98,19 +105,97 @@ const dataConsentSchema = new mongoose.Schema({
       type: Number,
       default: 0
     },
+    // Revenue share tracking
+    revenueShareEarned: {
+      type: Number,
+      default: 0
+    },
+    revenueSharePending: {
+      type: Number,
+      default: 0
+    },
+    revenueSharePaid: {
+      type: Number,
+      default: 0
+    },
+    // Lifetime stats
+    lifetimeEarnings: {
+      type: Number,
+      default: 0
+    },
+    lifetimePayouts: {
+      type: Number,
+      default: 0
+    },
+    // Payout settings
     payoutThreshold: {
       type: Number,
-      default: 100
+      default: 5000  // 5000 credits = $50
     },
     paymentMethod: {
       type: String,
-      enum: ['paypal', 'bank', 'crypto', 'none'],
+      enum: ['paypal', 'bank', 'crypto', 'gift_card', 'none'],
       default: 'none'
     },
     paymentDetails: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed,
       select: false
+    },
+    // Auto-payout
+    autoPayout: {
+      type: Boolean,
+      default: false
+    },
+    autoPayoutThreshold: {
+      type: Number,
+      default: 10000
     }
+  },
+
+  // Tier information
+  tier: {
+    current: {
+      type: String,
+      enum: ['bronze', 'silver', 'gold', 'platinum', 'diamond'],
+      default: 'bronze'
+    },
+    multiplier: {
+      type: Number,
+      default: 1.0
+    },
+    monthlyCredits: {
+      type: Number,
+      default: 0
+    },
+    monthlyIncidents: {
+      type: Number,
+      default: 0
+    },
+    lastTierCheck: Date,
+    lastMonthReset: Date,
+    tierHistory: [{
+      tier: String,
+      achievedAt: Date,
+      lostAt: Date
+    }]
+  },
+
+  // Streak tracking
+  streaks: {
+    currentDailyStreak: {
+      type: Number,
+      default: 0
+    },
+    longestDailyStreak: {
+      type: Number,
+      default: 0
+    },
+    lastContributionDate: Date,
+    weeklyContributions: {
+      type: Number,
+      default: 0
+    },
+    lastStreakBonusAt: Date
   },
 
   // Usage statistics

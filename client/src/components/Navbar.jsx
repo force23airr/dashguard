@@ -25,6 +25,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <>
               <Link to="/dashboard">Dashboard</Link>
+              <Link to="/rewards" className="rewards-link">Rewards</Link>
               <Link to="/analytics">Analytics</Link>
               <Link to="/plates">Plate Search</Link>
               <Link to="/insurance/claims">Insurance</Link>
@@ -43,6 +44,7 @@ const Navbar = () => {
             </>
           ) : (
             <>
+              <Link to="/get-rewarded" className="rewards-link">Earn Money</Link>
               <Link to="/login">Login</Link>
               <Link to="/register" className="btn btn-primary">
                 Sign Up
