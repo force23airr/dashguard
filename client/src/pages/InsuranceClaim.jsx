@@ -12,10 +12,16 @@ function InsuranceClaim() {
   const [claim, setClaim] = useState(null);
   const [claims, setClaims] = useState([]);
   const [incident, setIncident] = useState(null);
+  const [insurancePartners, setInsurancePartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [activeTab, setActiveTab] = useState('list');
+
+  // Involvement flow state
+  const [involvementType, setInvolvementType] = useState(null); // 'involved' | 'witness'
+  const [selectedInsurer, setSelectedInsurer] = useState(null);
+  const [insurerSearch, setInsurerSearch] = useState('');
 
   const [formData, setFormData] = useState({
     claimant: {
@@ -41,6 +47,7 @@ function InsuranceClaim() {
   });
 
   useEffect(() => {
+    fetchInsurancePartners();
     if (claimId) {
       fetchClaim(claimId);
     } else if (incidentId) {
@@ -50,6 +57,15 @@ function InsuranceClaim() {
       fetchClaims();
     }
   }, [claimId, incidentId]);
+
+  const fetchInsurancePartners = async () => {
+    try {
+      const res = await api.get('/partners/insurance');
+      setInsurancePartners(res.data.partners || []);
+    } catch (error) {
+      console.error('Failed to load insurance partners:', error);
+    }
+  };
 
   const fetchClaims = async () => {
     try {
@@ -122,6 +138,17 @@ function InsuranceClaim() {
     }));
   };
 
+  const handleSelectInsurer = (insurer) => {
+    setSelectedInsurer(insurer);
+    setFormData(prev => ({
+      ...prev,
+      claimant: {
+        ...prev.claimant,
+        insuranceCompany: insurer.name
+      }
+    }));
+  };
+
   const handleCreateClaim = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -130,12 +157,32 @@ function InsuranceClaim() {
     try {
       const res = await api.post('/insurance/claims', {
         incidentId,
+        involvementType,
+        insurancePartnerId: selectedInsurer?._id,
         ...formData
       });
       setMessage({ type: 'success', text: 'Claim created successfully!' });
       navigate(`/insurance/claims/${res.data._id}`);
     } catch (error) {
       setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to create claim' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleWitnessReport = async () => {
+    setSubmitting(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      await api.post('/insurance/witness-report', {
+        incidentId,
+        description: formData.lossDetails.descriptionOfLoss
+      });
+      setMessage({ type: 'success', text: 'Witness report submitted! You earned 15 credits.' });
+      setTimeout(() => navigate('/incidents'), 2000);
+    } catch (error) {
+      setMessage({ type: 'error', text: error.response?.data?.message || 'Failed to submit report' });
     } finally {
       setSubmitting(false);
     }
@@ -173,9 +220,181 @@ function InsuranceClaim() {
     }
   };
 
+  const filteredInsurers = insurancePartners.filter(p =>
+    p.name.toLowerCase().includes(insurerSearch.toLowerCase())
+  );
+
   if (loading) {
     return <div className="container loading">Loading...</div>;
   }
+
+  // Involvement Selection Screen
+  const renderInvolvementSelection = () => (
+    <div className="involvement-selection">
+      <h2>What's your involvement?</h2>
+      <p className="involvement-subtitle">Choose how you were connected to this incident</p>
+
+      <div className="involvement-options">
+        <div
+          className={`involvement-card ${involvementType === 'involved' ? 'selected' : ''}`}
+          onClick={() => setInvolvementType('involved')}
+        >
+          <span className="involvement-icon">&#128663;</span>
+          <h3>I Was Involved</h3>
+          <p>I was a driver or passenger in this incident and want to file a claim with my insurance company.</p>
+          <ul className="involvement-details">
+            <li>File a claim with YOUR insurance</li>
+            <li>Send video evidence directly</li>
+            <li>Track claim status</li>
+          </ul>
+        </div>
+
+        <div
+          className={`involvement-card ${involvementType === 'witness' ? 'selected' : ''}`}
+          onClick={() => setInvolvementType('witness')}
+        >
+          <span className="involvement-icon">&#128065;</span>
+          <h3>I Witnessed This</h3>
+          <p>I captured footage of an incident I was not involved in and want to help others.</p>
+          <ul className="involvement-details">
+            <li>Help insurance companies investigate</li>
+            <li>Flag dangerous drivers</li>
+            <li>Earn 15 credits for your report</li>
+          </ul>
+        </div>
+      </div>
+
+      {involvementType && (
+        <button className="continue-btn" onClick={() => {}}>
+          Continue
+        </button>
+      )}
+    </div>
+  );
+
+  // Insurance Company Selector
+  const renderInsurerSelector = () => (
+    <div className="insurer-selector">
+      <button className="back-link" onClick={() => setInvolvementType(null)}>
+        ← Back to involvement selection
+      </button>
+
+      <h2>Select Your Insurance Company</h2>
+      <p className="selector-subtitle">We'll help you send your claim directly to them</p>
+
+      <div className="search-box">
+        <input
+          type="text"
+          placeholder="Search insurance companies..."
+          value={insurerSearch}
+          onChange={(e) => setInsurerSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="featured-insurers">
+        <h4>Popular Insurance Companies</h4>
+        <div className="insurer-grid">
+          {insurancePartners.filter(p => p.isFeatured).slice(0, 6).map(insurer => (
+            <div
+              key={insurer._id}
+              className={`insurer-card ${selectedInsurer?._id === insurer._id ? 'selected' : ''}`}
+              onClick={() => handleSelectInsurer(insurer)}
+            >
+              <span className="insurer-logo">&#128736;</span>
+              <span className="insurer-name">{insurer.name}</span>
+              {insurer.features?.acceptsVideoClaims && (
+                <span className="video-badge">Accepts Video</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="all-insurers">
+        <h4>All Insurance Companies</h4>
+        <div className="insurer-list">
+          {filteredInsurers.map(insurer => (
+            <div
+              key={insurer._id}
+              className={`insurer-list-item ${selectedInsurer?._id === insurer._id ? 'selected' : ''}`}
+              onClick={() => handleSelectInsurer(insurer)}
+            >
+              <span className="insurer-name">{insurer.name}</span>
+              <div className="insurer-features">
+                {insurer.features?.acceptsVideoClaims && <span className="feature-tag">Video</span>}
+                {insurer.features?.hasApiIntegration && <span className="feature-tag">Direct Submit</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="custom-insurer-note">
+        Don't see your insurance company? You can still create a claim and we'll provide a PDF for manual submission.
+      </p>
+    </div>
+  );
+
+  // Witness Report Form
+  const renderWitnessForm = () => (
+    <div className="witness-form">
+      <button className="back-link" onClick={() => setInvolvementType(null)}>
+        ← Back to involvement selection
+      </button>
+
+      <div className="witness-header">
+        <span className="witness-icon">&#128065;</span>
+        <div>
+          <h2>Community Witness Report</h2>
+          <p>Help others by sharing what you saw</p>
+        </div>
+      </div>
+
+      {incident && (
+        <div className="incident-info">
+          <h4>Incident Details</h4>
+          <p><strong>{incident.title}</strong></p>
+          <p>{incident.location?.address}</p>
+          <p>Date: {new Date(incident.createdAt).toLocaleDateString()}</p>
+        </div>
+      )}
+
+      <div className="witness-benefits">
+        <h4>Your report helps:</h4>
+        <ul>
+          <li>&#10003; Insurance companies investigate claims accurately</li>
+          <li>&#10003; Flag dangerous drivers in the community database</li>
+          <li>&#10003; Improve road safety for everyone</li>
+        </ul>
+      </div>
+
+      <div className="form-group">
+        <label>Additional Details (Optional)</label>
+        <textarea
+          rows="4"
+          placeholder="Describe what you witnessed..."
+          value={formData.lossDetails.descriptionOfLoss}
+          onChange={(e) => handleInputChange('lossDetails', 'descriptionOfLoss', e.target.value)}
+        />
+      </div>
+
+      <div className="reward-box">
+        <span className="reward-icon">&#127942;</span>
+        <div>
+          <strong>You'll earn: 15 credits</strong>
+          <p>Thank you for helping the community!</p>
+        </div>
+      </div>
+
+      <button
+        className="submit-btn witness-submit"
+        onClick={handleWitnessReport}
+        disabled={submitting}
+      >
+        {submitting ? 'Submitting...' : 'Submit Witness Report'}
+      </button>
+    </div>
+  );
 
   return (
     <div className="insurance-claim-page">
@@ -220,6 +439,7 @@ function InsuranceClaim() {
                   <div className="claim-details">
                     <p><strong>Incident:</strong> {c.incident?.title || 'N/A'}</p>
                     <p><strong>Policy:</strong> {c.claimant?.policyNumber || 'Not specified'}</p>
+                    <p><strong>Insurance:</strong> {c.claimant?.insuranceCompany || 'N/A'}</p>
                     <p><strong>Created:</strong> {new Date(c.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
@@ -228,8 +448,18 @@ function InsuranceClaim() {
           </div>
         )}
 
-        {activeTab === 'new' && (
+        {activeTab === 'new' && incidentId && !involvementType && renderInvolvementSelection()}
+
+        {activeTab === 'new' && involvementType === 'involved' && !selectedInsurer && renderInsurerSelector()}
+
+        {activeTab === 'new' && involvementType === 'witness' && renderWitnessForm()}
+
+        {activeTab === 'new' && involvementType === 'involved' && selectedInsurer && (
           <form onSubmit={handleCreateClaim} className="claim-form">
+            <button type="button" className="back-link" onClick={() => setSelectedInsurer(null)}>
+              ← Back to insurance selection
+            </button>
+
             {incident && (
               <div className="incident-info">
                 <h3>Creating claim for incident:</h3>
@@ -238,12 +468,13 @@ function InsuranceClaim() {
               </div>
             )}
 
-            {!incidentId && (
-              <div className="form-group">
-                <label>Select an Incident</label>
-                <p className="hint">Go to an incident and click "Create Insurance Claim" to start.</p>
+            <div className="selected-insurer-display">
+              <span className="insurer-logo">&#128736;</span>
+              <div>
+                <strong>{selectedInsurer.name}</strong>
+                <p>Your claim will be sent to this insurance company</p>
               </div>
-            )}
+            </div>
 
             <h3>Claimant Information</h3>
             <div className="form-row">
@@ -281,6 +512,7 @@ function InsuranceClaim() {
                   type="text"
                   value={formData.claimant.insuranceCompany}
                   onChange={(e) => handleInputChange('claimant', 'insuranceCompany', e.target.value)}
+                  disabled
                 />
               </div>
             </div>
@@ -415,10 +647,25 @@ function InsuranceClaim() {
               </label>
             </div>
 
-            <button type="submit" className="submit-btn" disabled={submitting || !incidentId}>
+            <button type="submit" className="submit-btn" disabled={submitting}>
               {submitting ? 'Creating...' : 'Create Claim Draft'}
             </button>
           </form>
+        )}
+
+        {activeTab === 'new' && !incidentId && (
+          <div className="no-incident-message">
+            <div className="form-group">
+              <label>Select an Incident</label>
+              <p className="hint">Go to an incident and click "Create Insurance Claim" to start.</p>
+              <button
+                className="btn-secondary"
+                onClick={() => navigate('/incidents')}
+              >
+                Browse Incidents
+              </button>
+            </div>
+          </div>
         )}
 
         {activeTab === 'view' && claim && (

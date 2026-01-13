@@ -18,6 +18,7 @@ import GetRewarded from './pages/GetRewarded';
 import RewardsDashboard from './pages/RewardsDashboard';
 import LeaderboardPage from './pages/LeaderboardPage';
 import FlaggedPlates from './pages/FlaggedPlates';
+import DataPartners from './pages/DataPartners';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -149,6 +150,7 @@ function App() {
           />
           <Route path="/rewards/leaderboard" element={<LeaderboardPage />} />
           <Route path="/flagged-drivers" element={<FlaggedPlates />} />
+          <Route path="/partners" element={<DataPartners />} />
         </Routes>
       </main>
     </div>

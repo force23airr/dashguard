@@ -18,6 +18,11 @@ import analyticsRoutes from './routes/analytics.js';
 import marketplaceRoutes, { marketplaceApiRouter } from './routes/marketplace.js';
 import plateRoutes from './routes/plates.js';
 import rewardRoutes from './routes/rewards.js';
+import partnerRoutes from './routes/partners.js';
+
+// Models for seeding
+import InsurancePartner from './models/InsurancePartner.js';
+import DataPartner from './models/DataPartner.js';
 
 dotenv.config();
 
@@ -59,6 +64,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/plates', plateRoutes);
 app.use('/api/rewards', rewardRoutes);
+app.use('/api/partners', partnerRoutes);
 
 // External API routes (v1)
 app.use('/api/v1/insurance', insuranceApiRouter);
@@ -75,8 +81,16 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+
+  // Seed default partners on startup
+  try {
+    await InsurancePartner.seedDefaults();
+    await DataPartner.seedDefaults();
+  } catch (error) {
+    console.error('Error seeding partners:', error.message);
+  }
 });
 
 export { io };
