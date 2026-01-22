@@ -1,6 +1,7 @@
 import InsuranceClaim from '../models/InsuranceClaim.js';
 import Incident from '../models/Incident.js';
 import ApiKey from '../models/ApiKey.js';
+import User from '../models/User.js';
 import { generateInsuranceClaimPDF } from '../services/pdf/pdfGenerator.js';
 import { sendClaimNotification } from '../services/email/emailService.js';
 import crypto from 'crypto';
@@ -56,6 +57,71 @@ export const createClaim = async (req, res) => {
     res.status(201).json(claim);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Submit a witness report for an incident
+// @route   POST /api/insurance/witness-report
+// @access  Private
+export const submitWitnessReport = async (req, res) => {
+  try {
+    const { incidentId, description } = req.body;
+
+    if (!incidentId) {
+      return res.status(400).json({ message: 'Incident ID is required' });
+    }
+
+    const incident = await Incident.findById(incidentId);
+    if (!incident) {
+      return res.status(404).json({ message: 'Incident not found' });
+    }
+
+    // Check if user already submitted a witness report
+    const existingWitness = incident.witnesses?.find(
+      w => w.user?.toString() === req.user._id.toString()
+    );
+
+    if (existingWitness) {
+      return res.status(400).json({ message: 'You have already submitted a witness report for this incident' });
+    }
+
+    // Add witness report
+    if (!incident.witnesses) {
+      incident.witnesses = [];
+    }
+
+    incident.witnesses.push({
+      user: req.user._id,
+      statement: description || 'Witness report submitted via DashGuard',
+      submittedAt: new Date()
+    });
+
+    incident.witnessCount = (incident.witnessCount || 0) + 1;
+    await incident.save();
+
+    // Award 15 credits
+    const WITNESS_CREDITS = 15;
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { creditsBalance: WITNESS_CREDITS }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('newWitnessReport', {
+        incidentId: incident._id,
+        witnessCount: incident.witnessCount
+      });
+    }
+
+    res.status(201).json({
+      message: 'Witness report submitted successfully',
+      creditsEarned: WITNESS_CREDITS,
+      incidentId: incident._id,
+      witnessCount: incident.witnessCount
+    });
+  } catch (error) {
+    console.error('Error submitting witness report:', error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -579,6 +645,7 @@ export const deleteApiKey = async (req, res) => {
 
 export default {
   createClaim,
+  submitWitnessReport,
   getUserClaims,
   getClaimById,
   updateClaim,

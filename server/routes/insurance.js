@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createClaim,
+  submitWitnessReport,
   getUserClaims,
   getClaimById,
   updateClaim,
@@ -28,6 +29,7 @@ const router = express.Router();
 
 // Claim management (authenticated users)
 router.post('/claims', auth, createClaim);
+router.post('/witness-report', auth, submitWitnessReport);
 router.get('/claims', auth, getUserClaims);
 router.get('/claims/:id', auth, getClaimById);
 router.put('/claims/:id', auth, updateClaim);

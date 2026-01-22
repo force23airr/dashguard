@@ -180,6 +180,25 @@ const incidentSchema = new mongoose.Schema({
       default: 'common'
     },
     usageCount: { type: Number, default: 0 }
+  },
+  // Witness reports
+  witnesses: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    statement: {
+      type: String,
+      maxlength: 2000
+    },
+    submittedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  witnessCount: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true
