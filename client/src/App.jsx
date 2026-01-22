@@ -19,6 +19,9 @@ import RewardsDashboard from './pages/RewardsDashboard';
 import LeaderboardPage from './pages/LeaderboardPage';
 import FlaggedPlates from './pages/FlaggedPlates';
 import DataPartners from './pages/DataPartners';
+import ReportViolation from './pages/ReportViolation';
+import ViolationDetail from './pages/ViolationDetail';
+import MyViolationReports from './pages/MyViolationReports';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -151,6 +154,23 @@ function App() {
           <Route path="/rewards/leaderboard" element={<LeaderboardPage />} />
           <Route path="/flagged-drivers" element={<FlaggedPlates />} />
           <Route path="/partners" element={<DataPartners />} />
+          <Route
+            path="/report-violation"
+            element={
+              <ProtectedRoute>
+                <ReportViolation />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/violations/:id" element={<ViolationDetail />} />
+          <Route
+            path="/my-violations"
+            element={
+              <ProtectedRoute>
+                <MyViolationReports />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
     </div>

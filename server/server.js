@@ -19,6 +19,7 @@ import marketplaceRoutes, { marketplaceApiRouter } from './routes/marketplace.js
 import plateRoutes from './routes/plates.js';
 import rewardRoutes from './routes/rewards.js';
 import partnerRoutes from './routes/partners.js';
+import violationRoutes from './routes/violations.js';
 
 // Models for seeding
 import InsurancePartner from './models/InsurancePartner.js';
@@ -65,6 +66,7 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/plates', plateRoutes);
 app.use('/api/rewards', rewardRoutes);
 app.use('/api/partners', partnerRoutes);
+app.use('/api/violations', violationRoutes);
 
 // External API routes (v1)
 app.use('/api/v1/insurance', insuranceApiRouter);

@@ -1,0 +1,788 @@
+import ViolationReport from '../models/ViolationReport.js';
+import PoliceStation from '../models/PoliceStation.js';
+import { processEvidenceFile, generatePackage, verifyAllEvidence } from '../services/evidence/evidencePackager.js';
+import { submitToPolice, checkSubmissionStatus, getRecommendedStation } from '../services/enforcement/lawEnforcementService.js';
+import { reportViolation, createWitnessReport, getCommonInsurers } from '../services/insurance/insuranceViolationService.js';
+import { getApplicableStatutes, getStateTrafficCodes, violationTypes, severityLevels, usStates } from '../config/trafficCodes.js';
+import path from 'path';
+import fs from 'fs';
+
+// @desc    Create a new violation report
+// @route   POST /api/violations
+// @access  Private
+export const createViolationReport = async (req, res) => {
+  try {
+    const {
+      violationType,
+      severity,
+      offendingVehicle,
+      location,
+      incidentDateTime,
+      description,
+      reporterVehicle,
+      consent
+    } = req.body;
+
+    // Parse nested objects if sent as strings (from FormData)
+    const parsedOffendingVehicle = typeof offendingVehicle === 'string'
+      ? JSON.parse(offendingVehicle)
+      : offendingVehicle;
+    const parsedLocation = typeof location === 'string'
+      ? JSON.parse(location)
+      : location;
+    const parsedConsent = typeof consent === 'string'
+      ? JSON.parse(consent)
+      : consent;
+    const parsedReporterVehicle = typeof reporterVehicle === 'string'
+      ? JSON.parse(reporterVehicle)
+      : reporterVehicle;
+
+    // Get applicable statutes based on violation type and state
+    const statutes = getApplicableStatutes(violationType, parsedLocation?.state || parsedOffendingVehicle?.plateState);
+
+    // Create the violation report
+    const violationReport = new ViolationReport({
+      reporter: req.user._id,
+      violationType,
+      severity,
+      offendingVehicle: parsedOffendingVehicle,
+      location: parsedLocation,
+      incidentDateTime: new Date(incidentDateTime),
+      description,
+      reporterVehicle: parsedReporterVehicle,
+      applicableStatutes: statutes,
+      consent: {
+        ...parsedConsent,
+        tosAcceptedAt: new Date()
+      },
+      status: 'submitted'
+    });
+
+    // Add initial custody entry
+    violationReport.addCustodyEntry(
+      'created',
+      req.user._id,
+      'Violation report created',
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    // Process uploaded evidence files
+    if (req.files && req.files.length > 0) {
+      await violationReport.save(); // Save first to get reportNumber
+
+      for (const file of req.files) {
+        const evidence = await processEvidenceFile(file, violationReport.reportNumber);
+        violationReport.evidence.push(evidence);
+      }
+
+      violationReport.addCustodyEntry(
+        'evidence_added',
+        req.user._id,
+        `${req.files.length} evidence file(s) uploaded and processed`,
+        req.ip,
+        req.headers['user-agent']
+      );
+    }
+
+    await violationReport.save();
+
+    res.status(201).json({
+      success: true,
+      violationReport,
+      message: 'Violation report created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating violation report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all violation reports (with filters)
+// @route   GET /api/violations
+// @access  Public
+export const getViolationReports = async (req, res) => {
+  try {
+    const {
+      violationType,
+      severity,
+      status,
+      plateState,
+      licensePlate,
+      startDate,
+      endDate,
+      limit = 20,
+      page = 1,
+      sort = '-createdAt'
+    } = req.query;
+
+    const query = {};
+
+    if (violationType) query.violationType = violationType;
+    if (severity) query.severity = severity;
+    if (status) query.status = status;
+    if (plateState) query['offendingVehicle.plateState'] = plateState;
+    if (licensePlate) query['offendingVehicle.licensePlate'] = new RegExp(licensePlate, 'i');
+
+    if (startDate || endDate) {
+      query.incidentDateTime = {};
+      if (startDate) query.incidentDateTime.$gte = new Date(startDate);
+      if (endDate) query.incidentDateTime.$lte = new Date(endDate);
+    }
+
+    const total = await ViolationReport.countDocuments(query);
+    const pages = Math.ceil(total / parseInt(limit));
+
+    const violations = await ViolationReport.find(query)
+      .populate('reporter', 'username avatar')
+      .select('-chainOfCustody')
+      .sort(sort)
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    res.json({
+      violations,
+      pagination: {
+        current: parseInt(page),
+        pages,
+        total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching violation reports:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get current user's violation reports
+// @route   GET /api/violations/my-reports
+// @access  Private
+export const getMyViolationReports = async (req, res) => {
+  try {
+    const { status, limit = 20, page = 1 } = req.query;
+
+    const query = { reporter: req.user._id };
+    if (status) query.status = status;
+
+    const total = await ViolationReport.countDocuments(query);
+    const pages = Math.ceil(total / parseInt(limit));
+
+    const violations = await ViolationReport.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    // Calculate stats
+    const stats = {
+      total: await ViolationReport.countDocuments({ reporter: req.user._id }),
+      submitted: await ViolationReport.countDocuments({ reporter: req.user._id, status: 'submitted' }),
+      verified: await ViolationReport.countDocuments({ reporter: req.user._id, status: 'verified' }),
+      submittedToAuthorities: await ViolationReport.countDocuments({ reporter: req.user._id, status: 'submitted_to_authorities' }),
+      citationsIssued: await ViolationReport.countDocuments({
+        reporter: req.user._id,
+        'lawEnforcementSubmissions.status': 'citation_issued'
+      })
+    };
+
+    res.json({
+      violations,
+      stats,
+      pagination: {
+        current: parseInt(page),
+        pages,
+        total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user violation reports:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get violation report by ID
+// @route   GET /api/violations/:id
+// @access  Public
+export const getViolationReportById = async (req, res) => {
+  try {
+    const violation = await ViolationReport.findById(req.params.id)
+      .populate('reporter', 'username avatar')
+      .populate('chainOfCustody.performedBy', 'username')
+      .populate('verification.moderatorReview.reviewedBy', 'username')
+      .populate('lawEnforcementSubmissions.policeStation', 'name email');
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    // Log access in chain of custody (only for authenticated users)
+    if (req.user) {
+      violation.addCustodyEntry(
+        'accessed',
+        req.user._id,
+        'Report accessed',
+        req.ip,
+        req.headers['user-agent']
+      );
+      await violation.save();
+    }
+
+    res.json(violation);
+  } catch (error) {
+    console.error('Error fetching violation report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update violation report
+// @route   PUT /api/violations/:id
+// @access  Private (owner only)
+export const updateViolationReport = async (req, res) => {
+  try {
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    // Check ownership
+    if (violation.reporter.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this report' });
+    }
+
+    // Only allow updates on draft or submitted reports
+    if (!['draft', 'submitted'].includes(violation.status)) {
+      return res.status(400).json({ message: 'Cannot update report in current status' });
+    }
+
+    const allowedUpdates = [
+      'violationType', 'severity', 'offendingVehicle', 'location',
+      'incidentDateTime', 'description', 'reporterVehicle'
+    ];
+
+    allowedUpdates.forEach(field => {
+      if (req.body[field] !== undefined) {
+        violation[field] = req.body[field];
+      }
+    });
+
+    // Update statutes if violation type or location changed
+    if (req.body.violationType || req.body.location || req.body.offendingVehicle) {
+      const state = violation.location?.state || violation.offendingVehicle?.plateState;
+      violation.applicableStatutes = getApplicableStatutes(violation.violationType, state);
+    }
+
+    violation.addCustodyEntry(
+      'status_changed',
+      req.user._id,
+      'Report updated',
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    await violation.save();
+
+    res.json({
+      success: true,
+      violation,
+      message: 'Violation report updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating violation report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete violation report
+// @route   DELETE /api/violations/:id
+// @access  Private (owner only)
+export const deleteViolationReport = async (req, res) => {
+  try {
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    // Check ownership (or admin)
+    if (violation.reporter.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Not authorized to delete this report' });
+    }
+
+    // Don't allow deletion if submitted to authorities
+    if (violation.status === 'submitted_to_authorities') {
+      return res.status(400).json({ message: 'Cannot delete report that has been submitted to authorities' });
+    }
+
+    await violation.deleteOne();
+
+    res.json({ success: true, message: 'Violation report deleted' });
+  } catch (error) {
+    console.error('Error deleting violation report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Add evidence to violation report
+// @route   POST /api/violations/:id/evidence
+// @access  Private (owner only)
+export const addEvidence = async (req, res) => {
+  try {
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    if (violation.reporter.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to add evidence to this report' });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'No files uploaded' });
+    }
+
+    for (const file of req.files) {
+      const evidence = await processEvidenceFile(file, violation.reportNumber);
+      violation.evidence.push(evidence);
+    }
+
+    violation.addCustodyEntry(
+      'evidence_added',
+      req.user._id,
+      `${req.files.length} additional evidence file(s) uploaded`,
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    await violation.save();
+
+    res.json({
+      success: true,
+      evidence: violation.evidence,
+      message: `${req.files.length} file(s) added successfully`
+    });
+  } catch (error) {
+    console.error('Error adding evidence:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Download evidence package
+// @route   GET /api/violations/:id/evidence-package
+// @access  Private
+export const downloadEvidencePackage = async (req, res) => {
+  try {
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    const { zipPath, manifestPath, packageHash } = await generatePackage(violation, {
+      userId: req.user._id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.download(zipPath, `evidence_package_${violation.reportNumber}.zip`);
+  } catch (error) {
+    console.error('Error generating evidence package:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Vote on violation report (confirm or dispute)
+// @route   POST /api/violations/:id/vote
+// @access  Private
+export const voteOnReport = async (req, res) => {
+  try {
+    const { vote } = req.body; // 'confirm' or 'dispute'
+
+    if (!['confirm', 'dispute'].includes(vote)) {
+      return res.status(400).json({ message: 'Invalid vote. Must be "confirm" or "dispute"' });
+    }
+
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    // Check if user already voted
+    const existingVote = violation.verification.communityVotes.voters.find(
+      v => v.user.toString() === req.user._id.toString()
+    );
+
+    if (existingVote) {
+      // Update existing vote
+      if (existingVote.vote !== vote) {
+        // Adjust counts
+        if (existingVote.vote === 'confirm') {
+          violation.verification.communityVotes.confirms--;
+        } else {
+          violation.verification.communityVotes.disputes--;
+        }
+
+        if (vote === 'confirm') {
+          violation.verification.communityVotes.confirms++;
+        } else {
+          violation.verification.communityVotes.disputes++;
+        }
+
+        existingVote.vote = vote;
+        existingVote.timestamp = new Date();
+      }
+    } else {
+      // Add new vote
+      violation.verification.communityVotes.voters.push({
+        user: req.user._id,
+        vote,
+        timestamp: new Date()
+      });
+
+      if (vote === 'confirm') {
+        violation.verification.communityVotes.confirms++;
+      } else {
+        violation.verification.communityVotes.disputes++;
+      }
+    }
+
+    // Auto-verify if enough confirms
+    const { confirms, disputes } = violation.verification.communityVotes;
+    if (confirms >= 5 && confirms > disputes * 2) {
+      violation.verification.status = 'verified';
+      if (violation.status === 'submitted') {
+        violation.status = 'verified';
+      }
+    } else if (disputes >= 5 && disputes > confirms * 2) {
+      violation.verification.status = 'disputed';
+    }
+
+    await violation.save();
+
+    res.json({
+      success: true,
+      communityVotes: violation.verification.communityVotes,
+      verificationStatus: violation.verification.status
+    });
+  } catch (error) {
+    console.error('Error voting on report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Submit violation report to police
+// @route   POST /api/violations/:id/submit-to-police
+// @access  Private (owner only)
+export const submitToPoliceEndpoint = async (req, res) => {
+  try {
+    const { policeStationId, method } = req.body;
+
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    if (violation.reporter.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to submit this report' });
+    }
+
+    // Get police station
+    let policeStation;
+    if (policeStationId) {
+      policeStation = await PoliceStation.findById(policeStationId);
+    } else {
+      policeStation = await getRecommendedStation(violation);
+    }
+
+    if (!policeStation) {
+      return res.status(404).json({ message: 'No suitable police station found' });
+    }
+
+    const submission = await submitToPolice(violation, policeStation, {
+      method: method || 'email',
+      userId: req.user._id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      submission,
+      message: `Report submitted to ${policeStation.name}`
+    });
+  } catch (error) {
+    console.error('Error submitting to police:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get police submission status
+// @route   GET /api/violations/:id/police-status
+// @access  Private
+export const getPoliceSubmissionStatus = async (req, res) => {
+  try {
+    const violation = await ViolationReport.findById(req.params.id)
+      .populate('lawEnforcementSubmissions.policeStation', 'name email');
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    res.json({
+      submissions: violation.lawEnforcementSubmissions
+    });
+  } catch (error) {
+    console.error('Error getting police status:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Submit violation report to insurance
+// @route   POST /api/violations/:id/submit-to-insurance
+// @access  Private (owner only)
+export const submitToInsurance = async (req, res) => {
+  try {
+    const { database, insurerName, insurerEmail } = req.body;
+
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    if (violation.reporter.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to submit this report' });
+    }
+
+    const submission = await reportViolation(violation, {
+      database: database || 'direct_insurer',
+      insurerName,
+      insurerEmail,
+      userId: req.user._id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      submission,
+      message: `Report submitted to ${insurerName || database}`
+    });
+  } catch (error) {
+    console.error('Error submitting to insurance:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Create witness report (completes InsuranceClaim.jsx backend)
+// @route   POST /api/violations/witness-report
+// @access  Private
+export const createWitnessReportEndpoint = async (req, res) => {
+  try {
+    const violationReport = await createWitnessReport(
+      {
+        ...req.body,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      },
+      req.user
+    );
+
+    res.status(201).json({
+      success: true,
+      violationReport,
+      message: 'Witness report created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating witness report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get moderation queue
+// @route   GET /api/violations/moderation/queue
+// @access  Private (moderator/admin)
+export const getModerationQueue = async (req, res) => {
+  try {
+    const { limit = 20, page = 1 } = req.query;
+
+    const query = {
+      $or: [
+        { 'verification.status': 'pending' },
+        { 'verification.status': 'disputed' }
+      ],
+      status: { $in: ['submitted', 'under_review'] }
+    };
+
+    const total = await ViolationReport.countDocuments(query);
+    const pages = Math.ceil(total / parseInt(limit));
+
+    const violations = await ViolationReport.find(query)
+      .populate('reporter', 'username avatar')
+      .sort({ createdAt: 1 }) // Oldest first
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    res.json({
+      violations,
+      pagination: {
+        current: parseInt(page),
+        pages,
+        total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching moderation queue:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Review violation report (moderator action)
+// @route   POST /api/violations/:id/review
+// @access  Private (moderator/admin)
+export const reviewReport = async (req, res) => {
+  try {
+    const { decision, notes } = req.body; // 'approved', 'rejected'
+
+    if (!['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({ message: 'Invalid decision' });
+    }
+
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    violation.verification.moderatorReview = {
+      reviewedBy: req.user._id,
+      reviewedAt: new Date(),
+      decision,
+      notes
+    };
+
+    if (decision === 'approved') {
+      violation.verification.status = 'verified';
+      violation.status = 'verified';
+    } else {
+      violation.verification.status = 'rejected';
+      violation.status = 'closed';
+    }
+
+    violation.addCustodyEntry(
+      'reviewed',
+      req.user._id,
+      `Moderator review: ${decision}${notes ? ` - ${notes}` : ''}`,
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    await violation.save();
+
+    res.json({
+      success: true,
+      violation,
+      message: `Report ${decision}`
+    });
+  } catch (error) {
+    console.error('Error reviewing report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get traffic codes for a state
+// @route   GET /api/violations/codes/:state
+// @access  Public
+export const getTrafficCodes = async (req, res) => {
+  try {
+    const { state } = req.params;
+    const codes = getStateTrafficCodes(state.toUpperCase());
+
+    res.json({
+      state: state.toUpperCase(),
+      codes,
+      available: Object.keys(codes).length > 0
+    });
+  } catch (error) {
+    console.error('Error fetching traffic codes:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get specific traffic code
+// @route   GET /api/violations/codes/:state/:violationType
+// @access  Public
+export const getSpecificCode = async (req, res) => {
+  try {
+    const { state, violationType } = req.params;
+    const statutes = getApplicableStatutes(violationType, state.toUpperCase());
+
+    res.json({
+      state: state.toUpperCase(),
+      violationType,
+      statutes
+    });
+  } catch (error) {
+    console.error('Error fetching specific code:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get violation type options
+// @route   GET /api/violations/options/types
+// @access  Public
+export const getViolationTypes = async (req, res) => {
+  res.json({ violationTypes });
+};
+
+// @desc    Get severity level options
+// @route   GET /api/violations/options/severities
+// @access  Public
+export const getSeverityLevels = async (req, res) => {
+  res.json({ severityLevels });
+};
+
+// @desc    Get US states list
+// @route   GET /api/violations/options/states
+// @access  Public
+export const getStates = async (req, res) => {
+  res.json({ states: usStates });
+};
+
+// @desc    Get insurers list
+// @route   GET /api/violations/options/insurers
+// @access  Public
+export const getInsurers = async (req, res) => {
+  const { state } = req.query;
+  const insurers = getCommonInsurers(state);
+  res.json({ insurers });
+};
+
+export default {
+  createViolationReport,
+  getViolationReports,
+  getMyViolationReports,
+  getViolationReportById,
+  updateViolationReport,
+  deleteViolationReport,
+  addEvidence,
+  downloadEvidencePackage,
+  voteOnReport,
+  submitToPoliceEndpoint,
+  getPoliceSubmissionStatus,
+  submitToInsurance,
+  createWitnessReportEndpoint,
+  getModerationQueue,
+  reviewReport,
+  getTrafficCodes,
+  getSpecificCode,
+  getViolationTypes,
+  getSeverityLevels,
+  getStates,
+  getInsurers
+};
