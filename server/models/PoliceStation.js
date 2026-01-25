@@ -78,6 +78,56 @@ const policeStationSchema = new mongoose.Schema({
     title: String,
     directEmail: String,
     directPhone: String
+  },
+
+  // Police Portal Configuration
+  portalEnabled: {
+    type: Boolean,
+    default: false
+  },
+  portalAdmins: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+
+  // Officers with Portal Access
+  officers: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    badgeNumber: String,
+    rank: String,
+    division: String,
+    addedAt: {
+      type: Date,
+      default: Date.now
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    }
+  }],
+
+  // Department Stats (for leaderboard)
+  stats: {
+    totalReviewsCompleted: {
+      type: Number,
+      default: 0
+    },
+    citationsIssued: {
+      type: Number,
+      default: 0
+    },
+    casesDismissed: {
+      type: Number,
+      default: 0
+    },
+    averageReviewTimeHours: {
+      type: Number,
+      default: 0
+    },
+    lastActivityAt: Date
   }
 }, {
   timestamps: true

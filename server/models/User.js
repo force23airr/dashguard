@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'moderator', 'admin'],
+    enum: ['user', 'moderator', 'admin', 'police_officer'],
     default: 'user'
   },
 
@@ -105,6 +105,35 @@ const userSchema = new mongoose.Schema({
     vehicleType: {
       type: String,
       enum: ['car', 'suv', 'truck', 'van', 'motorcycle', 'bicycle', 'other']
+    }
+  },
+
+  // Police officer profile
+  policeProfile: {
+    department: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PoliceStation'
+    },
+    badgeNumber: String,
+    rank: String,
+    division: String,
+    stats: {
+      casesReviewed: {
+        type: Number,
+        default: 0
+      },
+      citationsIssued: {
+        type: Number,
+        default: 0
+      },
+      casesDismissed: {
+        type: Number,
+        default: 0
+      }
+    },
+    isActive: {
+      type: Boolean,
+      default: true
     }
   }
 }, {

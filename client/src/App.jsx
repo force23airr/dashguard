@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
@@ -22,6 +22,8 @@ import DataPartners from './pages/DataPartners';
 import ReportViolation from './pages/ReportViolation';
 import ViolationDetail from './pages/ViolationDetail';
 import MyViolationReports from './pages/MyViolationReports';
+import PoliceLogin from './pages/PoliceLogin';
+import PoliceDashboard from './pages/PoliceDashboard';
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -46,9 +48,12 @@ const GuestRoute = ({ children }) => {
 };
 
 function App() {
+  const location = useLocation();
+  const isPoliceRoute = location.pathname.startsWith('/police');
+
   return (
     <div className="app">
-      <Navbar />
+      {!isPoliceRoute && <Navbar />}
       <main>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -171,6 +176,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Police Portal Routes */}
+          <Route path="/police/login" element={<PoliceLogin />} />
+          <Route path="/police/dashboard" element={<PoliceDashboard />} />
         </Routes>
       </main>
     </div>

@@ -8,7 +8,9 @@ import {
   deletePoliceStation,
   createPoliceReport,
   getIncidentPoliceReports,
-  getPoliceReport
+  getPoliceReport,
+  enableDepartmentPortal,
+  createPoliceOfficer
 } from '../controllers/policeController.js';
 import auth from '../middleware/auth.js';
 import admin from '../middleware/admin.js';
@@ -24,6 +26,10 @@ router.get('/stations/:id', getPoliceStationById);
 router.post('/stations', admin, createPoliceStation);
 router.put('/stations/:id', admin, updatePoliceStation);
 router.delete('/stations/:id', admin, deletePoliceStation);
+
+// Police portal admin routes
+router.put('/stations/:id/enable-portal', admin, enableDepartmentPortal);
+router.post('/officers', admin, createPoliceOfficer);
 
 // Police report routes (on incidents)
 router.post('/incidents/:id/report', auth, createPoliceReport);

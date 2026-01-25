@@ -1,5 +1,6 @@
 import PoliceStation from '../models/PoliceStation.js';
 import Incident from '../models/Incident.js';
+import User from '../models/User.js';
 import { generatePoliceReport } from '../services/pdf/pdfGenerator.js';
 import { sendPoliceReport } from '../services/email/emailService.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -287,6 +288,87 @@ export const getPoliceReport = async (req, res) => {
   }
 };
 
+// @desc    Enable police portal for a department (Admin only)
+// @route   PUT /api/police/stations/:id/enable-portal
+// @access  Admin
+export const enableDepartmentPortal = async (req, res) => {
+  try {
+    const department = await PoliceStation.findById(req.params.id);
+
+    if (!department) {
+      return res.status(404).json({ message: 'Police station not found' });
+    }
+
+    department.portalEnabled = true;
+    await department.save();
+
+    res.json({
+      success: true,
+      message: 'Police portal enabled successfully',
+      department
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Create police officer account (Admin only)
+// @route   POST /api/police/officers
+// @access  Admin
+export const createPoliceOfficer = async (req, res) => {
+  try {
+    const { username, email, password, departmentId, badgeNumber, rank, division } = req.body;
+
+    // Validate department exists
+    const department = await PoliceStation.findById(departmentId);
+    if (!department) {
+      return res.status(404).json({ message: 'Police station not found' });
+    }
+
+    // Create user with police_officer role
+    const user = new User({
+      username,
+      email,
+      password, // Will be hashed by User model pre-save hook
+      role: 'police_officer',
+      policeProfile: {
+        department: departmentId,
+        badgeNumber,
+        rank,
+        division,
+        isActive: true
+      }
+    });
+
+    await user.save();
+
+    // Add officer to department's officers array
+    department.officers.push({
+      user: user._id,
+      badgeNumber,
+      rank,
+      division
+    });
+    await department.save();
+
+    // Return user without password
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.status(201).json({
+      success: true,
+      message: 'Police officer account created successfully',
+      user: userResponse
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      // Duplicate key error
+      return res.status(400).json({ message: 'Email or username already exists' });
+    }
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Helper: Calculate distance between two coordinates (Haversine formula)
 function calculateDistance(lat1, lon1, lat2, lon2) {
   const R = 6371; // Earth's radius in km
@@ -313,5 +395,7 @@ export default {
   deletePoliceStation,
   createPoliceReport,
   getIncidentPoliceReports,
-  getPoliceReport
+  getPoliceReport,
+  enableDepartmentPortal,
+  createPoliceOfficer
 };
