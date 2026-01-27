@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import EnhancedVoteButtons from '../components/EnhancedVoteButtons';
+import RecklessnessRating from '../components/RecklessnessRating';
+import CommentSection from '../components/CommentSection';
+import ChainOfCustodyTimeline from '../components/ChainOfCustodyTimeline';
 import './ViolationDetail.css';
 
 const VIOLATION_TYPE_LABELS = {
@@ -42,6 +46,8 @@ function ViolationDetail() {
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState('');
   const [userVote, setUserVote] = useState(null);
+  const [userVoteTypes, setUserVoteTypes] = useState([]);
+  const [userRating, setUserRating] = useState(null);
 
   useEffect(() => {
     fetchViolation();
@@ -57,7 +63,18 @@ function ViolationDetail() {
         const vote = response.data.verification.communityVotes.voters.find(
           v => v.user === user._id
         );
-        if (vote) setUserVote(vote.vote);
+        if (vote) {
+          setUserVote(vote.vote); // Legacy
+          setUserVoteTypes(vote.voteTypes || []); // Enhanced
+        }
+      }
+
+      // Check if user has rated
+      if (user && response.data.recklessnessRating?.ratings) {
+        const rating = response.data.recklessnessRating.ratings.find(
+          r => r.user === user._id
+        );
+        if (rating) setUserRating(rating.rating);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load violation report');
@@ -66,7 +83,7 @@ function ViolationDetail() {
     }
   };
 
-  const handleVote = async (vote) => {
+  const handleVote = async (voteTypes) => {
     if (!user) {
       navigate('/login');
       return;
@@ -74,7 +91,7 @@ function ViolationDetail() {
 
     setActionLoading('vote');
     try {
-      const response = await api.post(`/violations/${id}/vote`, { vote });
+      const response = await api.post(`/violations/${id}/vote`, { voteTypes });
       setViolation(prev => ({
         ...prev,
         verification: {
@@ -83,11 +100,29 @@ function ViolationDetail() {
           status: response.data.verificationStatus
         }
       }));
-      setUserVote(vote);
+      setUserVoteTypes(voteTypes);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to vote');
     } finally {
       setActionLoading('');
+    }
+  };
+
+  const handleRating = async (rating) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await api.post(`/violations/${id}/rating`, { rating });
+      setViolation(prev => ({
+        ...prev,
+        recklessnessRating: response.data.recklessnessRating
+      }));
+      setUserRating(rating);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to submit rating');
     }
   };
 
@@ -318,66 +353,54 @@ function ViolationDetail() {
             )}
 
             {/* Chain of Custody */}
-            <section className="detail-section">
-              <h2>Chain of Custody</h2>
-              <div className="custody-timeline">
-                {violation.chainOfCustody?.map((entry, index) => (
-                  <div key={index} className="custody-entry">
-                    <div className="custody-dot"></div>
-                    <div className="custody-content">
-                      <div className="custody-action">{entry.action.replace(/_/g, ' ')}</div>
-                      <div className="custody-timestamp">
-                        {new Date(entry.timestamp).toLocaleString()}
-                      </div>
-                      {entry.details && (
-                        <div className="custody-details">{entry.details}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <ChainOfCustodyTimeline chainOfCustody={violation.chainOfCustody} />
+
+            {/* Comments Section */}
+            <CommentSection violationId={id} />
           </div>
 
           {/* Sidebar */}
           <div className="detail-sidebar">
-            {/* Community Voting */}
-            <section className="sidebar-card">
-              <h3>Community Verification</h3>
-              <div className="vote-stats">
-                <div className="vote-confirm">
-                  <span className="vote-count">{violation.verification?.communityVotes?.confirms || 0}</span>
-                  <span className="vote-label">Confirms</span>
-                </div>
-                <div className="vote-dispute">
-                  <span className="vote-count">{violation.verification?.communityVotes?.disputes || 0}</span>
-                  <span className="vote-label">Disputes</span>
-                </div>
-              </div>
-              {user && !isOwner && (
-                <div className="vote-buttons">
-                  <button
-                    className={`btn-vote btn-confirm ${userVote === 'confirm' ? 'active' : ''}`}
-                    onClick={() => handleVote('confirm')}
-                    disabled={actionLoading === 'vote'}
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    className={`btn-vote btn-dispute ${userVote === 'dispute' ? 'active' : ''}`}
-                    onClick={() => handleVote('dispute')}
-                    disabled={actionLoading === 'vote'}
-                  >
-                    Dispute
-                  </button>
-                </div>
-              )}
-              {!user && (
+            {/* Enhanced Community Voting */}
+            {user && !isOwner ? (
+              <section className="sidebar-card">
+                <EnhancedVoteButtons
+                  voteData={violation.verification?.communityVotes}
+                  userVotes={userVoteTypes}
+                  onVote={handleVote}
+                  loading={actionLoading === 'vote'}
+                  disabled={false}
+                />
+              </section>
+            ) : !user ? (
+              <section className="sidebar-card">
+                <h3>Community Voting</h3>
                 <p className="login-prompt">
                   <Link to="/login">Login</Link> to vote on this report
                 </p>
-              )}
-            </section>
+              </section>
+            ) : null}
+
+            {/* Recklessness Rating */}
+            {user && !isOwner ? (
+              <section className="sidebar-card">
+                <RecklessnessRating
+                  average={violation.recklessnessRating?.average || 0}
+                  count={violation.recklessnessRating?.count || 0}
+                  userRating={userRating}
+                  onRate={handleRating}
+                  loading={false}
+                  disabled={false}
+                />
+              </section>
+            ) : !user ? (
+              <section className="sidebar-card">
+                <h3>Recklessness Rating</h3>
+                <p className="login-prompt">
+                  <Link to="/login">Login</Link> to rate this behavior
+                </p>
+              </section>
+            ) : null}
 
             {/* Actions */}
             {isOwner && (

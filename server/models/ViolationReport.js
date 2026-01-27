@@ -176,11 +176,23 @@ const violationReportSchema = new mongoose.Schema({
       default: 'pending'
     },
     communityVotes: {
+      // LEGACY: Keep for backward compatibility
       confirms: { type: Number, default: 0 },
       disputes: { type: Number, default: 0 },
+
+      // NEW: Enhanced voting types (multi-select)
+      voteTypes: {
+        confirmViolation: { type: Number, default: 0 },
+        notViolation: { type: Number, default: 0 },
+        veryDangerous: { type: Number, default: 0 },
+        sendToPolice: { type: Number, default: 0 },
+        needContext: { type: Number, default: 0 }
+      },
+
       voters: [{
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        vote: { type: String, enum: ['confirm', 'dispute'] },
+        vote: { type: String, enum: ['confirm', 'dispute'] },  // LEGACY
+        voteTypes: [String],  // NEW: array of selected vote types
         timestamp: Date
       }]
     },
@@ -194,6 +206,36 @@ const violationReportSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     }
+  },
+
+  // Recklessness Rating (1-10 scale)
+  recklessnessRating: {
+    average: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 10
+    },
+    count: {
+      type: Number,
+      default: 0
+    },
+    ratings: [{
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      rating: {
+        type: Number,
+        min: 1,
+        max: 10,
+        required: true
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now
+      }
+    }]
   },
 
   // Law Enforcement Submissions
@@ -287,6 +329,7 @@ violationReportSchema.index({ violationType: 1 });
 violationReportSchema.index({ incidentDateTime: -1 });
 violationReportSchema.index({ 'location.lat': 1, 'location.lng': 1 });
 violationReportSchema.index({ 'verification.status': 1 });
+violationReportSchema.index({ 'recklessnessRating.average': -1 });
 violationReportSchema.index({ createdAt: -1 });
 
 // Pre-save hook to generate report number

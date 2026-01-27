@@ -393,15 +393,24 @@ export const downloadEvidencePackage = async (req, res) => {
   }
 };
 
-// @desc    Vote on violation report (confirm or dispute)
+// @desc    Vote on violation report (enhanced multi-select voting)
 // @route   POST /api/violations/:id/vote
 // @access  Private
 export const voteOnReport = async (req, res) => {
   try {
-    const { vote } = req.body; // 'confirm' or 'dispute'
+    const { voteTypes } = req.body; // Array of vote types
 
-    if (!['confirm', 'dispute'].includes(vote)) {
-      return res.status(400).json({ message: 'Invalid vote. Must be "confirm" or "dispute"' });
+    const validVoteTypes = ['confirmViolation', 'notViolation', 'veryDangerous', 'sendToPolice', 'needContext'];
+
+    if (!Array.isArray(voteTypes) || voteTypes.length === 0) {
+      return res.status(400).json({ message: 'voteTypes must be a non-empty array' });
+    }
+
+    // Validate all vote types
+    for (const voteType of voteTypes) {
+      if (!validVoteTypes.includes(voteType)) {
+        return res.status(400).json({ message: `Invalid vote type: ${voteType}` });
+      }
     }
 
     const violation = await ViolationReport.findById(req.params.id);
@@ -410,44 +419,63 @@ export const voteOnReport = async (req, res) => {
       return res.status(404).json({ message: 'Violation report not found' });
     }
 
+    // Prevent owner from voting on their own report
+    if (violation.reporter.toString() === req.user._id.toString()) {
+      return res.status(403).json({ message: 'Cannot vote on your own report' });
+    }
+
     // Check if user already voted
-    const existingVote = violation.verification.communityVotes.voters.find(
+    const existingVoter = violation.verification.communityVotes.voters.find(
       v => v.user.toString() === req.user._id.toString()
     );
 
-    if (existingVote) {
-      // Update existing vote
-      if (existingVote.vote !== vote) {
-        // Adjust counts
-        if (existingVote.vote === 'confirm') {
-          violation.verification.communityVotes.confirms--;
-        } else {
-          violation.verification.communityVotes.disputes--;
+    if (existingVoter) {
+      // Decrement old vote counts
+      if (existingVoter.voteTypes && existingVoter.voteTypes.length > 0) {
+        for (const oldType of existingVoter.voteTypes) {
+          if (violation.verification.communityVotes.voteTypes[oldType] > 0) {
+            violation.verification.communityVotes.voteTypes[oldType]--;
+          }
         }
+      }
+      // Legacy: also decrement old vote if exists
+      if (existingVoter.vote === 'confirm' && violation.verification.communityVotes.confirms > 0) {
+        violation.verification.communityVotes.confirms--;
+      } else if (existingVoter.vote === 'dispute' && violation.verification.communityVotes.disputes > 0) {
+        violation.verification.communityVotes.disputes--;
+      }
 
-        if (vote === 'confirm') {
-          violation.verification.communityVotes.confirms++;
-        } else {
-          violation.verification.communityVotes.disputes++;
-        }
+      // Update vote types
+      existingVoter.voteTypes = voteTypes;
+      existingVoter.timestamp = new Date();
 
-        existingVote.vote = vote;
-        existingVote.timestamp = new Date();
+      // Legacy: set primary vote for backward compatibility
+      if (voteTypes.includes('confirmViolation')) {
+        existingVoter.vote = 'confirm';
+      } else if (voteTypes.includes('notViolation')) {
+        existingVoter.vote = 'dispute';
       }
     } else {
       // Add new vote
       violation.verification.communityVotes.voters.push({
         user: req.user._id,
-        vote,
+        vote: voteTypes.includes('confirmViolation') ? 'confirm' : 'dispute', // Legacy
+        voteTypes,
         timestamp: new Date()
       });
-
-      if (vote === 'confirm') {
-        violation.verification.communityVotes.confirms++;
-      } else {
-        violation.verification.communityVotes.disputes++;
-      }
     }
+
+    // Increment new vote counts
+    for (const voteType of voteTypes) {
+      violation.verification.communityVotes.voteTypes[voteType] =
+        (violation.verification.communityVotes.voteTypes[voteType] || 0) + 1;
+    }
+
+    // Sync legacy counts for backward compatibility
+    violation.verification.communityVotes.confirms =
+      violation.verification.communityVotes.voteTypes.confirmViolation || 0;
+    violation.verification.communityVotes.disputes =
+      violation.verification.communityVotes.voteTypes.notViolation || 0;
 
     // Auto-verify if enough confirms
     const { confirms, disputes } = violation.verification.communityVotes;
@@ -469,6 +497,69 @@ export const voteOnReport = async (req, res) => {
     });
   } catch (error) {
     console.error('Error voting on report:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Submit recklessness rating (1-10 scale)
+// @route   POST /api/violations/:id/rating
+// @access  Private
+export const submitRating = async (req, res) => {
+  try {
+    const { rating } = req.body;
+
+    // Validate rating
+    const ratingNum = parseInt(rating);
+    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 10) {
+      return res.status(400).json({ message: 'Rating must be between 1 and 10' });
+    }
+
+    const violation = await ViolationReport.findById(req.params.id);
+
+    if (!violation) {
+      return res.status(404).json({ message: 'Violation report not found' });
+    }
+
+    // Prevent owner from rating their own report
+    if (violation.reporter.toString() === req.user._id.toString()) {
+      return res.status(403).json({ message: 'Cannot rate your own report' });
+    }
+
+    // Check if user already rated
+    const existingRating = violation.recklessnessRating.ratings.find(
+      r => r.user.toString() === req.user._id.toString()
+    );
+
+    if (existingRating) {
+      // Update existing rating
+      existingRating.rating = ratingNum;
+      existingRating.timestamp = new Date();
+    } else {
+      // Add new rating
+      violation.recklessnessRating.ratings.push({
+        user: req.user._id,
+        rating: ratingNum,
+        timestamp: new Date()
+      });
+      violation.recklessnessRating.count++;
+    }
+
+    // Recalculate average
+    const totalRating = violation.recklessnessRating.ratings.reduce((sum, r) => sum + r.rating, 0);
+    violation.recklessnessRating.average = Math.round((totalRating / violation.recklessnessRating.ratings.length) * 10) / 10;
+
+    await violation.save();
+
+    res.json({
+      success: true,
+      recklessnessRating: {
+        average: violation.recklessnessRating.average,
+        count: violation.recklessnessRating.count,
+        userRating: ratingNum
+      }
+    });
+  } catch (error) {
+    console.error('Error submitting rating:', error);
     res.status(500).json({ message: error.message });
   }
 };

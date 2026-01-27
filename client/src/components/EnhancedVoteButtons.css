@@ -1,0 +1,141 @@
+.enhanced-vote-buttons {
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.enhanced-vote-buttons h4 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.vote-instructions {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 16px 0;
+}
+
+.vote-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vote-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  position: relative;
+}
+
+.vote-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.vote-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vote-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.vote-label {
+  flex: 1;
+}
+
+.vote-count {
+  background: rgba(0, 0, 0, 0.1);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Color variants */
+.vote-green {
+  border-color: #d1fae5;
+  color: #065f46;
+}
+
+.vote-green.selected {
+  border-color: #10b981;
+  background: #d1fae5;
+}
+
+.vote-red {
+  border-color: #fee2e2;
+  color: #991b1b;
+}
+
+.vote-red.selected {
+  border-color: #ef4444;
+  background: #fee2e2;
+}
+
+.vote-orange {
+  border-color: #fed7aa;
+  color: #92400e;
+}
+
+.vote-orange.selected {
+  border-color: #f97316;
+  background: #fed7aa;
+}
+
+.vote-blue {
+  border-color: #dbeafe;
+  color: #1e3a8a;
+}
+
+.vote-blue.selected {
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+
+.vote-gray {
+  border-color: #e5e7eb;
+  color: #374151;
+}
+
+.vote-gray.selected {
+  border-color: #6b7280;
+  background: #e5e7eb;
+}
+
+.vote-loading {
+  margin-top: 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .enhanced-vote-buttons {
+    padding: 16px;
+  }
+
+  .vote-button {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .vote-icon {
+    font-size: 20px;
+  }
+}

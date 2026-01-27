@@ -51,6 +51,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Make io accessible to routes
 app.set('io', io);
 
+// Middleware to attach io to all requests
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 // Serve reports and exports directories
 app.use('/reports', express.static(path.join(__dirname, 'reports')));
 app.use('/exports', express.static(path.join(__dirname, 'exports')));
@@ -77,6 +83,18 @@ app.use('/api/v1/marketplace', marketplaceApiRouter);
 // Socket.io connection
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
+
+  // Join violation report room for real-time updates
+  socket.on('join-violation', (violationId) => {
+    socket.join(`violation-${violationId}`);
+    console.log(`Socket ${socket.id} joined room: violation-${violationId}`);
+  });
+
+  // Leave violation report room
+  socket.on('leave-violation', (violationId) => {
+    socket.leave(`violation-${violationId}`);
+    console.log(`Socket ${socket.id} left room: violation-${violationId}`);
+  });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);

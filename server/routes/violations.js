@@ -9,6 +9,7 @@ import {
   addEvidence,
   downloadEvidencePackage,
   voteOnReport,
+  submitRating,
   submitToPoliceEndpoint,
   getPoliceSubmissionStatus,
   submitToInsurance,
@@ -22,6 +23,13 @@ import {
   getStates,
   getInsurers
 } from '../controllers/violationController.js';
+import {
+  getComments,
+  createComment,
+  toggleCommentLike,
+  deleteComment,
+  flagComment
+} from '../controllers/commentController.js';
 import { auth, optionalAuth } from '../middleware/auth.js';
 import { moderator } from '../middleware/admin.js';
 import upload from '../middleware/upload.js';
@@ -60,6 +68,14 @@ router.get('/:id/evidence-package', auth, downloadEvidencePackage);
 
 // Verification & voting
 router.post('/:id/vote', auth, voteOnReport);
+router.post('/:id/rating', auth, submitRating);
+
+// Comments
+router.get('/:id/comments', optionalAuth, getComments);
+router.post('/:id/comments', auth, createComment);
+router.post('/comments/:commentId/like', auth, toggleCommentLike);
+router.delete('/comments/:commentId', auth, deleteComment);
+router.post('/comments/:commentId/flag', auth, flagComment);
 
 // Moderator review
 router.post('/:id/review', moderator, reviewReport);
